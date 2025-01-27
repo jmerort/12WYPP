@@ -42,13 +42,13 @@ class Goal
         Goal (string nn):n{nn}{};
 
         string name(){return n;};
-        Tactic tactic(){return t;};
+        vector <Tactic> tactics(){return t;};
 
-        void add_tactic(Tactic tt){t = tt;};
+        void add_tactic(Tactic tt){t.push_back(tt);};
 
     private:
         string n;
-        Tactic t;
+        vector <Tactic> t;
 };
 
 
@@ -61,16 +61,16 @@ class Weekday
 {
     public:
         Weekday(){};
-        Weekday (Date dd) :d{dd},s{0}{}; 
+        Weekday (Date dd) :d{dd},s{}{}; 
 
         Date date(){return d;};
-        double score(){return s;};
+        vector <double> scores(){return s;};
 
-        void give_score(double ss){s = ss;};
+        void give_scores(vector <double> ss){s = ss;};
 
     private:
         Date d; //Date
-        double s; //Score for the tactic of the day
+        vector <double> s; //Scores for the tactics of the day
 };
 
 
@@ -111,15 +111,24 @@ void WY::create_year()
     g = {goal};
 
     //create tactic
-    string tactic;
-    cout << "Tactic to accomplish goal " << g.name() << ": ";
-    cin >> tactic;
+    string t;
+    vector <string> tactics;
+    cout << "Tactics to accomplish goal " << g.name() << "(ended by \'|\'): ";
+    while (t != "|")
+    {
+        cin >> t;
+        if (t != "|") tactics.push_back(t);
+    }
 
-    //create objective
+    //create objectives
     double obj {0};
-    cout << "Desired weekly score for tactic " << g.tactic().name() <<": ";
-    cin >> obj;
-    g.add_tactic({tactic, obj});
+    for (int i {0}; i < tactics.size(); i++)
+    {
+        cout << "Weekly objective for tactic " << tactics[i] <<": ";
+        cin >> obj;
+
+        g.add_tactic({tactics[i], obj});
+    }
 
     //create day
     d = Weekday{today};
@@ -130,11 +139,24 @@ void WY::create_year()
 void WY::view_stats()
 {
     cout << "Current goal: " << g.name() << '\n';
-    cout << "Current tactic: " << g.tactic().name() << '\n';
-    cout << "Desired score for tactic: " << g.tactic().objective() << '\n';
-    cout << "Current day score: " << d.score() << '\n';
+    cout << "Current tactics and scores:\n";
+    for (int i {0}; i < g.tactics().size(); i++)
+    {
+        cout << g.tactics()[i].name()
+             << " - objective: " << g.tactics()[i].objective()
+             << " - score: " << d.scores()[i] << '\n';
+    } 
 
-    double percentage {d.score()/g.tactic().objective()*100};
+    double sum_s {0}, 
+           sum_o {0};
+
+    for (int i {0}; i < g.tactics().size(); i++)
+    {
+        sum_o += g.tactics()[i].objective();
+        sum_s += d.scores()[i];
+    }
+
+    double percentage {sum_s/sum_o*100};
     cout << "Year % = " << percentage << "%.\n";
 }
 
@@ -142,10 +164,17 @@ void WY::view_stats()
 
 void WY::score_day()
 {
-    cout << "Enter the daily score for the tactic " << g.tactic().name() << ": ";
-    int score;
-    cin >> score;
-    d.give_score(score);
+    vector <double> scores;
+    double s {0};
+
+    for (int i {0}; i < g.tactics().size(); i++)
+    {
+        cout << "Daily score for the tactic " << g.tactics()[i].name() << ": ";
+        cin >> s;
+        scores.push_back(s);
+    }
+    
+    d.give_scores(scores);
 }
 
 
@@ -154,13 +183,31 @@ void WY::score_day()
 void WY::save_data()
 {
     std::ofstream outFile("data.txt");  // Open a file for writing
+    vector <int> v;
+
+    //for every goal
+    v.push_back(1);
+    v.push_back(g.tactics().size());
 
     if (outFile.is_open()) 
     {  // Check if the file opened successfully
-        outFile <<g.name() << '\n'
-                << g.tactic().name() << '\n'
-                << g.tactic().objective() << '\n'
-                << d.score() << '\n';
+        outFile << v[0] << '\n';
+        outFile << v[1] << '\n';
+        outFile << "end_info" << '\n';
+
+        outFile << g.name() << '\n';
+
+        for (Tactic i : g.tactics())
+            outFile << i.name() << '\n';
+
+        for (Tactic i : g.tactics())
+            outFile << i.objective() << '\n';
+        
+        for (double i : d.scores())
+            outFile << i << '\n';
+        
+        outFile << "end_data" << '\n';
+
         outFile.close();  // Close the file after writing
         std::cout << "Data written to file successfully.\n";
     } 
@@ -173,21 +220,29 @@ void WY::save_data()
 
 void WY::load_data()
 {
-    string l_goal; //loaded goal
-    string l_tactic;
-    double l_objective;
-    double l_score;
-
-    vector <string> v;
+    vector <int> sizes; //vector to load control info
+    vector <string> v; //vector to store file content
 
     std::ifstream inFile("data.txt");  // Open the file for reading
-
     if (inFile.is_open()) 
     {  // Check if the file opened successfully
         std::string line;
         while (std::getline(inFile, line)) 
         {
-            v.push_back(line); //save file content in a vector
+            cout << line << '\n';
+            if (line != "end_info") //load control information
+            {
+                sizes.push_back(std::stod(line));
+            }
+            else break;
+        }
+        while (std::getline(inFile, line)) 
+        {
+            if (line != "end_data") //load year data
+            {
+                v.push_back(line);
+            }
+            else break;
         }
         inFile.close();  // Don't forget to close the file
         cout << "Data successfully loaded.\n";
@@ -195,17 +250,27 @@ void WY::load_data()
     else
     {
         std::cout << "Error opening file for reading.\n";
+        return;
     }
 
     //use vector data to load new year
-        //create goal
+    //load goal
     g = {v[0]};
 
-    //create tactic
-    g.add_tactic({v[1], std::stod(v[2])});
+    //load tactic names and objectives
+    for (int i {0}; i < sizes[1]; i++)
+    {
+        g.add_tactic({v[1+i], std::stod(v[1+sizes[1]])});
+    }
 
-    //create day
-    d.give_score(std::stod(v[3]));
+    vector <double> scores;
+    for (int i {0}; i < sizes[1]; i++)
+    {
+        scores.push_back(std::stod(v[sizes[1]*2+i]));
+    }
+
+    //load scores
+    d.give_scores(scores);
 
     return;
 }

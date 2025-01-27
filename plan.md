@@ -28,3 +28,31 @@ past data whenever I start the program.
 
 Now It's time to polish the basic version as far as possible, and after that begin adding some more
 features, like many tactics for a goal, 7 day weeks and 12 week years.
+
+Once the most basic program is done, I'll add the capacity to choose multiple tactics for the one
+goal.
+
+
+To save and load the information into the "data.txt" file, I will store it in this way:
++ [control] int vector containing the sizes of the data elements
+        - Number of goals
+        - Number of tactics of the first goal
+        - Number of tactics of the second goal
+        - ...
+
++ ["end_control"] string to indicate end of control part
+
++ [data] string vector containing the data
+        - Name of 1st goal
+        - Name of 2nd goal
+        - ...
+        - Name of tactic 1 of goal 1
+        - Name of tactic 2 of goal 1
+        - ...
+        - Name of tactic 1 of goal 2
+        - ...
+        - Score of tactic 1 of goal 1
+        - Score of tactic 2 of goal 1
+        - ...
+        - Score of tactic 1 of goal 2
+        - ...
